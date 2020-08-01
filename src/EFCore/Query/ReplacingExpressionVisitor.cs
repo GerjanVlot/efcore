@@ -105,7 +105,48 @@ namespace Microsoft.EntityFrameworkCore.Query
             {
                 return memberAssignment.Expression;
             }
+            
+            // When a condition is present in the expression of the member will be replace but with the dto model but
+            // when the conition has a true or false that can be null it will give a null reference exception.
+            // IFF(test, new { Property = "value" }, null).Property TO
+            // IFF(test, new { Property = "value" }.Property, null) 
+            if (innerExpression is ConditionalExpression conditionalExpression)
+            {
+                if (conditionalExpression.IfFalse.IsNullConstantExpression() &&
+                    conditionalExpression.IfTrue is MemberInitExpression)
+                {
+                    memberExpression = memberExpression.Update(conditionalExpression.IfTrue);
+                    var nullableType = memberExpression.Type.IsNullableType() ? memberExpression.Type : typeof(Nullable<>).MakeGenericType(memberExpression.Type);
 
+                    conditionalExpression = Expression.Condition(
+                        conditionalExpression.Test,
+                        Expression.Convert(memberExpression, nullableType),
+                        Expression.Constant(null, nullableType)
+                    );
+
+                    return memberExpression.Type != conditionalExpression.Type ?
+                       (Expression)Expression.Convert(conditionalExpression, memberExpression.Type) :
+                       conditionalExpression;
+                }
+
+                if (conditionalExpression.IfTrue.IsNullConstantExpression() &&
+                    conditionalExpression.IfFalse is MemberInitExpression)
+                {
+                    memberExpression = memberExpression.Update(conditionalExpression.IfFalse);
+                    var nullableType = memberExpression.Type.IsNullableType() ? memberExpression.Type : typeof(Nullable<>).MakeGenericType(memberExpression.Type);
+
+                    var conditionalExpressionFixed = Expression.Condition(
+                        conditionalExpression.Test,
+                        Expression.Constant(null, nullableType),
+                        Expression.Convert(memberExpression, nullableType)
+                    );
+
+                    return memberExpression.Type != conditionalExpression.Type ?
+                      (Expression)Expression.Convert(conditionalExpression, memberExpression.Type) :
+                      conditionalExpression;
+                }
+            }
+            
             return memberExpression.Update(innerExpression);
         }
 
