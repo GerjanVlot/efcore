@@ -116,7 +116,9 @@ namespace Microsoft.EntityFrameworkCore.Query
                     conditionalExpression.IfTrue is MemberInitExpression)
                 {
                     memberExpression = memberExpression.Update(conditionalExpression.IfTrue);
-                    var nullableType = memberExpression.Type.IsNullableType() ? memberExpression.Type : typeof(Nullable<>).MakeGenericType(memberExpression.Type);
+                    var nullableType = memberExpression.Type.IsNullableType() ? 
+                        memberExpression.Type : 
+                        typeof(Nullable<>).MakeGenericType(memberExpression.Type);
 
                     conditionalExpression = Expression.Condition(
                         conditionalExpression.Test,
@@ -133,9 +135,11 @@ namespace Microsoft.EntityFrameworkCore.Query
                     conditionalExpression.IfFalse is MemberInitExpression)
                 {
                     memberExpression = memberExpression.Update(conditionalExpression.IfFalse);
-                    var nullableType = memberExpression.Type.IsNullableType() ? memberExpression.Type : typeof(Nullable<>).MakeGenericType(memberExpression.Type);
+                    var nullableType = memberExpression.Type.IsNullableType() ? 
+                        memberExpression.Type : 
+                        typeof(Nullable<>).MakeGenericType(memberExpression.Type);
 
-                    var conditionalExpressionFixed = Expression.Condition(
+                    conditionalExpression = Expression.Condition(
                         conditionalExpression.Test,
                         Expression.Constant(null, nullableType),
                         Expression.Convert(memberExpression, nullableType)
